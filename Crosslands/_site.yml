@@ -1,0 +1,10 @@
+name: "CrosslandsDemo"
+navbar:
+  title: "LimnoTech EnviroDIY Demo"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "About"
+      href: about.html
+    - text: "Site Data"
+      href: .html

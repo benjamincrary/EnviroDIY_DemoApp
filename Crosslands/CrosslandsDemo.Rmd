@@ -1,0 +1,44 @@
+---
+title: "CrosslandsDemo"
+author: "LimnoTech"
+date: "August 24, 2017"
+output: 
+  html_document:
+    theme: cosmo
+    highlight: tango
+    toc: true
+    toc_float: true
+runtime: shiny
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+#Crosslands Demo - EnviroDIY
+
+**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crosslands property. This is an example of how to live stream the data and create custom viewing pages. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
