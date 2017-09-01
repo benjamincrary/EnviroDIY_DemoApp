@@ -1,5 +1,5 @@
 ---
-title: "CrosslandsDemo"
+title: "Enviro DIY - Crosslands Demo"
 author: "LimnoTech"
 date: "August 24, 2017"
 output: 
@@ -14,21 +14,156 @@ runtime: shiny
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+library(ggplot2)
+library(tidyverse)
+library(quantmod)
+library(shiny)
+library(ggiraph)
+library(plotly)
+library(WaterML)
+library(leaflet)
+
 ```
 
 
 
-#Crosslands Demo - EnviroDIY
-
-**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crosslands property. This is an example of how to live stream the data and create custom viewing pages. 
 
 
+#Site Location
+
+**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crosslands property. The surface area of the pond is approximately XX square feet and receives runof from approximately XX square feet of rooftop and parking lots. 
+
+```{r echo=FALSE, warning=FALSE, include=FALSE}
+
+server <- "http://odm2wofpy.uwrl.usu.edu:8080/odm2timeseries/soap/cuahsi_1_0/.wsdl"
+info <- GetSiteInfo(server, "odm2timeseries:160065_Crosslands")
+lat <- info$Latitude[1]
+long <- info$Longitude[1]
+sitename <- info$SiteName[1]
+
+
+```
+
+
+```{r echo=FALSE, warning = FALSE}
+
+marker1 <- paste0("<strong>Site Name: </strong>", info$SiteName, "<dd>", "<strong>Number of Variables: </strong>", dim(info)[1], "<dd>", "<strong>Organization: </strong>", info$organization)
+
+
+output$map <- renderLeaflet({
+  map <- leaflet() %>%
+    addProviderTiles("CartoDB.Positron", group= "Light Basemap") %>%
+    addTiles(urlTemplate = 'http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+       attribution = 'Data source: Map data: Google, DigitalGlobe</a>', 
+       options = tileOptions(maxZoom = 20, minZoom=9, subdomains=c("mt0", "mt1", "mt2", "mt3")), group="Aerial Imagery") %>%
+    setView(lng = long, lat = lat, zoom=15) %>%
+    addMarkers(info$Longitude[1],info$Latitude[1], popup= marker1, label=info$SiteName) %>%
+    addLayersControl(
+      overlayGroups = c("Aerial Imagery"), 
+      options = layersControlOptions(collapsed = FALSE)) %>%
+    hideGroup(c("Aerial Imagery"))
+})
+
+leafletOutput('map')
+
+``` 
+
+
+#Site Info
+***Board:*** Mayfly v0.5 <br>
+***Variables:***
+
+
+#Live Data Summary
+
+```{r include=FALSE}
+
+
+
+```
+
+
+```{r echo=FALSE, warning = FALSE}
+
+vars <- c('Depth', 'Board Temperature', 'Air Temperature', 'Water Temperature')
+
+inputPanel(
+
+    column(12,
+          h4("Variable"),
+          selectizeInput("Var", "", vars, options = list(
+          placeholder='Please select',
+          onInitialize = I('function() {this.setValue(""); }')
+          ))
+    )
+)
+
+
+```
 
 
 
 
+```{r echo=FALSE, warning = FALSE}
 
+renderPlotly({
+  if(input$Var == "Depth"){
+    wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
+    tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
+    tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))
+    wdepth$datetime <- tidy$datetime
+    wdepth$date <- tidy$date
+    wdepth <- wdepth %>% filter(DataValue != 0)
+    wdepth <- wdepth %>% filter(DataValue != 9999)
+    wdepth <- wdepth %>% filter(DataValue < 4000) 
+    wdepth$Depth = 4000 - wdepth$DataValue
+    wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
+    mindate <- min(wdepth_dmax$date)
+    maxdate <- max(wdepth_dmax$date)
+    range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
+    wdepth_dmax <- left_join(range, wdepth_dmax, by="date")
+    wdepth_dmax$ribmin <- 0
+    wdepth_dmax <- wdepth_dmax %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
 
+    p <- ggplot(wdepth_dmax,aes(x=date, y=maxDepth)) + 
+            geom_line(colour="steelblue") +
+            geom_ribbon(aes(x=date, ymin=ribmin, ymax=ribmax), fill="steelblue", alpha = 0.5) +
+            theme_minimal() + 
+            theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+            xlab("Date") + 
+            ylab("Water Depth (mm)")
+    plotly_p <- ggplotly(p, dynamicTicks=TRUE)
+    plotly_p
+  }
+})
+
+renderTable({
+  if(input$Var == "Depth"){
+    wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
+    tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
+    tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))
+    wdepth$datetime <- tidy$datetime
+    wdepth$date <- tidy$date
+    wdepth <- wdepth %>% filter(DataValue != 0)
+    wdepth <- wdepth %>% filter(DataValue != 9999)
+    wdepth <- wdepth %>% filter(DataValue < 4000) 
+    wdepth$Depth = 4000 - wdepth$DataValue
+    wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
+    mindate <- min(wdepth_dmax$date)
+    maxdate <- max(wdepth_dmax$date)
+    range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
+    wdepth_dmax <- left_join(range, wdepth_dmax, by="date")
+    wdepth_dmax$ribmin <- 0
+    wdepth_dmax$ribmax <- ifelse(wdepth_dmax$maxDepth>0,wdepth_dmax$maxDepth, 0)
+
+    wdepth_dmax
+  }
+})
 
 
 
