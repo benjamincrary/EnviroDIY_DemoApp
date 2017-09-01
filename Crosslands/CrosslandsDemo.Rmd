@@ -9,7 +9,15 @@ output:
     toc: true
     toc_float: true
 runtime: shiny
-
+resource_files:
+- Oakdale_Sewershed.cpg
+- Oakdale_Sewershed.dbf
+- Oakdale_Sewershed.prj
+- Oakdale_Sewershed.sbn
+- Oakdale_Sewershed.sbx
+- Oakdale_Sewershed.shp
+- Oakdale_Sewershed.shp.xml
+- Oakdale_Sewershed.shx
 ---
 
 ```{r setup, include=FALSE}
@@ -23,6 +31,10 @@ library(ggiraph)
 library(plotly)
 library(WaterML)
 library(leaflet)
+library(rgdal)
+library(rgeos)
+library(sp)
+library(raster)
 
 ```
 
@@ -50,6 +62,10 @@ sitename <- info$SiteName[1]
 
 marker1 <- paste0("<strong>Site Name: </strong>", info$SiteName, "<dd>", "<strong>Number of Variables: </strong>", dim(info)[1], "<dd>", "<strong>Organization: </strong>", info$organization)
 
+sewershed <- shapefile("Oakdale_Sewershed.shp")
+sewershed <- spTransform(sewershed, CRS("+init=epsg:4326"))
+palshed <- colorFactor(c("#ddc5a1"), sewershed$OBJECTID)
+
 
 output$map <- renderLeaflet({
   map <- leaflet() %>%
@@ -58,6 +74,7 @@ output$map <- renderLeaflet({
        attribution = 'Data source: Map data: Google, DigitalGlobe</a>', 
        options = tileOptions(maxZoom = 20, minZoom=9, subdomains=c("mt0", "mt1", "mt2", "mt3")), group="Aerial Imagery") %>%
     setView(lng = long, lat = lat, zoom=15) %>%
+    addPolygons(data=sewershed, fillOpacity=0.3, smoothFactor=0.2, color="red") %>%
     addMarkers(info$Longitude[1],info$Latitude[1], popup= marker1, label=info$SiteName) %>%
     addLayersControl(
       overlayGroups = c("Aerial Imagery"), 
@@ -80,6 +97,8 @@ leafletOutput('map')
 ```{r include=FALSE}
 
 
+wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", Sys.Date()-7,endDate=Sys.Date()+2 )
+
 
 ```
 
@@ -92,12 +111,14 @@ inputPanel(
 
     column(12,
           h4("Variable"),
-          selectizeInput("Var", "", vars, options = list(
-          placeholder='Please select',
-          onInitialize = I('function() {this.setValue(""); }')
-          ))
+          selectizeInput("Var", "", vars
+          )
     )
 )
+
+#placeholder='Please select',
+#          onInitialize = I('function() {this.setValue(""); }')
+#
 
 
 ```
@@ -109,69 +130,116 @@ inputPanel(
 
 renderPlotly({
   if(input$Var == "Depth"){
-    wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
     tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
     wdepth$datetime <- tidy$datetime
     wdepth$date <- tidy$date
     wdepth <- wdepth %>% filter(DataValue != 0)
     wdepth <- wdepth %>% filter(DataValue != 9999)
     wdepth <- wdepth %>% filter(DataValue < 4000) 
-    wdepth$Depth = 4000 - wdepth$DataValue
-    wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
-    mindate <- min(wdepth_dmax$date)
-    maxdate <- max(wdepth_dmax$date)
-    range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
-    wdepth_dmax <- left_join(range, wdepth_dmax, by="date")
-    wdepth_dmax$ribmin <- 0
-    wdepth_dmax <- wdepth_dmax %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
+    wdepth$Depth = (4000 - wdepth$DataValue)/1000
+    #wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
+    mindate <- min(wdepth$datetime)
+    maxdate <- max(wdepth$datetime)
+    #range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
+    #wdepth <- left_join(range, wdepth_dmax, by="date") %>% 
+    #  mutate(ribmin = 0) %>%
+    #  mutate(ribmax = if(is.na(maxDepth),0,maxDepth))
+    #wdepth$ribmin <- 0
+    #wdepth <- wdepth %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
 
-    p <- ggplot(wdepth_dmax,aes(x=date, y=maxDepth)) + 
-            geom_line(colour="steelblue") +
-            geom_ribbon(aes(x=date, ymin=ribmin, ymax=ribmax), fill="steelblue", alpha = 0.5) +
+    p <- ggplot(wdepth,aes(x=datetime, y=Depth)) + 
+            geom_point(colour="steelblue", size=0.5) +
+            geom_line(colour="grey70", alpha=0.5, linetype="dashed") +
             theme_minimal() + 
             theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
             xlab("Date") + 
-            ylab("Water Depth (mm)")
-    plotly_p <- ggplotly(p, dynamicTicks=TRUE)
+            ylab("Water Depth (m)") +
+            xlim(mindate, Sys.time())
+    plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
     plotly_p
-  }
-})
-
-renderTable({
-  if(input$Var == "Depth"){
-    wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
-    tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
+    
+  } else if(input$Var == "Board Temperature"){
+    
+    btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+    tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))
-    wdepth$datetime <- tidy$datetime
-    wdepth$date <- tidy$date
-    wdepth <- wdepth %>% filter(DataValue != 0)
-    wdepth <- wdepth %>% filter(DataValue != 9999)
-    wdepth <- wdepth %>% filter(DataValue < 4000) 
-    wdepth$Depth = 4000 - wdepth$DataValue
-    wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
-    mindate <- min(wdepth_dmax$date)
-    maxdate <- max(wdepth_dmax$date)
-    range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
-    wdepth_dmax <- left_join(range, wdepth_dmax, by="date")
-    wdepth_dmax$ribmin <- 0
-    wdepth_dmax$ribmax <- ifelse(wdepth_dmax$maxDepth>0,wdepth_dmax$maxDepth, 0)
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    btemp$date <- tidy$date
+    btemp$datetime <- tidy$datetime
 
-    wdepth_dmax
-  }
+    p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
+          geom_point(colour="grey30", size=0.5) +
+          geom_line(colour="grey70",alpha=0.5, linetype="dashed") +
+          theme_minimal() + 
+          theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+          xlab("Date") + 
+          ylab("Board Temperature (Deg C)")
+    p
+
+
+    plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+    plotly_p
+  } else if(input$Var == "Water Temperature"){
+  
+  btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Adafruit_DS18B20_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+  tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
+  tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
+  tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
+  tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+  btemp$date <- tidy$date
+  btemp$datetime <- tidy$datetime
+  
+  p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
+    geom_point(colour="firebrick3", size=0.5) +
+    geom_line(colour="grey70",alpha=0.5, linetype="dashed") +
+    theme_minimal() + 
+    theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+    xlab("Date") + 
+    ylab("Water Temperature (Deg C)")
+  p
+  
+  
+  plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+  plotly_p
+  } else if(input$Var == "Air Temperature"){
+  
+  btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+  tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
+  tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
+  tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
+  tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+  btemp$date <- tidy$date
+  btemp$datetime <- tidy$datetime
+  btemp <- filter(btemp, DataValue <90000)
+  btemp$DataValue <- btemp$DataValue*9/5+32
+  
+  p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
+    geom_point(colour="chartreuse4", size=0.5) +
+    geom_line(colour="grey70",alpha=0.5, linetype="dashed") +
+    theme_minimal() + 
+    theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+    xlab("Date") + 
+    ylab("Air Temperature (Deg F)")
+  p
+  
+  
+  plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+  plotly_p
+}
 })
 
 
 
 
 
-
-
-
+observeEvent(input$click, {
+  wdepth2 <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
+  
+})
 
 
 
