@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "name: \"CrosslandsDemo\"\nnavbar:\n  title: \"LimnoTech EnviroDIY Demo\"\n  left:\n    - text: \"Home\"\n      href: index.html\n    - text: \"About\"\n      href: about.html\n    - text: \"Site Data\"\n      href: .html",
+    "created" : 1503609934017.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2374323608",
+    "id" : "FB6861A9",
+    "lastKnownWriteTime" : 1503669563,
+    "last_content_update" : 1503669563054,
+    "path" : "C:/Users/bcrary/Desktop/Projects/BigCZ/EnviroDIY_DemoApp/Crosslands/_site.yml",
+    "project_path" : "Crosslands/_site.yml",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "yaml"
+}

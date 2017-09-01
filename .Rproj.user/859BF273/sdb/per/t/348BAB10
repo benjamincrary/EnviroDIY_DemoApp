@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "---\ntitle: \"About This Website\"\n---\n\nMore about this website.",
+    "created" : 1503610185859.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2444316855",
+    "id" : "348BAB10",
+    "lastKnownWriteTime" : 1503610203,
+    "last_content_update" : 1503610204194,
+    "path" : "C:/Users/bcrary/Desktop/Projects/BigCZ/EnviroDIY_DemoApp/Crosslands/about.Rmd",
+    "project_path" : "Crosslands/about.Rmd",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

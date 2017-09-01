@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "---\ntitle: \"CrosslandsDemo\"\nauthor: \"LimnoTech\"\ndate: \"August 24, 2017\"\noutput: \n  html_document:\n    theme: cosmo\n    highlight: tango\n    toc: true\n    toc_float: true\nruntime: shiny\n\n---\n\n```{r setup, include=FALSE}\nknitr::opts_chunk$set(echo = TRUE)\n```\n\n\n\n#Crosslands Demo - EnviroDIY\n\n**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crosslands property. This is an example of how to live stream the data and create custom viewing pages. \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "created" : 1503609732230.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1475301921",
+    "id" : "4E8C198B",
+    "lastKnownWriteTime" : 1504273170,
+    "last_content_update" : 1504273170,
+    "path" : "C:/Users/bcrary/Desktop/Projects/BigCZ/EnviroDIY_DemoApp/Crosslands/CrosslandsDemo.Rmd",
+    "project_path" : "Crosslands/CrosslandsDemo.Rmd",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
