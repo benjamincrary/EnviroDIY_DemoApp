@@ -1,5 +1,0 @@
----
-title: "LimnoTech EnviroDIY Demo"
----
-
-Hello, Website!
