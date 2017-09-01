@@ -23,6 +23,7 @@ library(ggiraph)
 library(plotly)
 library(WaterML)
 library(leaflet)
+library(lubridate)
 
 ```
 
@@ -106,13 +107,16 @@ inputPanel(
 
 
 ```{r echo=FALSE, warning = FALSE}
+wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
+
+
 
 renderPlotly({
   if(input$Var == "Depth"){
-    wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
     tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
     tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))
+    tidy$datetime <- floor_date(tidy$datetime, "minute")
     tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))
     wdepth$datetime <- tidy$datetime
     wdepth$date <- tidy$date
@@ -121,16 +125,16 @@ renderPlotly({
     wdepth <- wdepth %>% filter(DataValue < 4000) 
     wdepth$Depth = 4000 - wdepth$DataValue
     wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
-    mindate <- min(wdepth_dmax$date)
-    maxdate <- max(wdepth_dmax$date)
-    range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
-    wdepth_dmax <- left_join(range, wdepth_dmax, by="date")
-    wdepth_dmax$ribmin <- 0
-    wdepth_dmax <- wdepth_dmax %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
+    mindate <- min(wdepth$datetime)
+    maxdate <- max(wdepth$datetime)
+    range <- data.frame(datetime=seq.POSIXt(mindate, maxdate, by=60))
+    wdepth <- left_join(range, wdepth, by="datetime")
+    wdepth$ribmin <- 0
+    wdepth <- wdepth %>% mutate(ribmax = ifelse(is.na(Depth),0,Depth))
 
-    p <- ggplot(wdepth_dmax,aes(x=date, y=maxDepth)) + 
+    p <- ggplot(wdepth,aes(x=datetime, y=Depth)) + 
             geom_line(colour="steelblue") +
-            geom_ribbon(aes(x=date, ymin=ribmin, ymax=ribmax), fill="steelblue", alpha = 0.5) +
+            geom_ribbon(aes(x=datetime, ymin=ribmin, ymax=ribmax), fill="steelblue", alpha = 0.5) +
             theme_minimal() + 
             theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
             xlab("Date") + 
@@ -139,39 +143,6 @@ renderPlotly({
     plotly_p
   }
 })
-
-renderTable({
-  if(input$Var == "Depth"){
-    wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
-    tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
-    tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))
-    wdepth$datetime <- tidy$datetime
-    wdepth$date <- tidy$date
-    wdepth <- wdepth %>% filter(DataValue != 0)
-    wdepth <- wdepth %>% filter(DataValue != 9999)
-    wdepth <- wdepth %>% filter(DataValue < 4000) 
-    wdepth$Depth = 4000 - wdepth$DataValue
-    wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
-    mindate <- min(wdepth_dmax$date)
-    maxdate <- max(wdepth_dmax$date)
-    range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
-    wdepth_dmax <- left_join(range, wdepth_dmax, by="date")
-    wdepth_dmax$ribmin <- 0
-    wdepth_dmax$ribmax <- ifelse(wdepth_dmax$maxDepth>0,wdepth_dmax$maxDepth, 0)
-
-    wdepth_dmax
-  }
-})
-
-
-
-
-
-
-
-
 
 
 
