@@ -1,6 +1,6 @@
 ---
 title: <span style="color:#1A5276">EnviroDIY - Crosslands Demo</span>
-author: <span style="color:#85C1E9">LimnoTech</span>
+author: <span style="color:#85C1E9">![alt text](Limno_Swirl_no_tagline_MAP.png)</span>
 subtitle: <span style="color:#424949">Live summary of measurements made in a stormwater pond in Oakdale, MN</span>
 output: 
   prettydoc::html_pretty:
