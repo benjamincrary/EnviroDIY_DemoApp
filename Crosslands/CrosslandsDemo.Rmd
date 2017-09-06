@@ -1,13 +1,11 @@
 ---
-title: "Enviro DIY - Crosslands Demo"
-author: "LimnoTech"
-date: "August 24, 2017"
+title: <span style="color:#1A5276">EnviroDIY - Crosslands Demo</span>
+author: <span style="color:#85C1E9">LimnoTech</span>
+subtitle: <span style="color:#424949">Live summary of measurements made in a stormwater pond in Oakdale, MN</span>
 output: 
-  html_document:
-    theme: cosmo
-    highlight: tango
-    toc: true
-    toc_float: true
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
 runtime: shiny
 resource_files:
 - Oakdale_Sewershed.cpg
@@ -38,13 +36,11 @@ library(raster)
 
 ```
 
+**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crosslands property. The surface area of the pond is approximately 7,500 square feet while the pond's sewershed (delineated in red on the [map](#map)) is 55 acres. The pond was constructed in between two business park developments. 
 
 
 
 
-#Site Location
-
-**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crosslands property. The surface area of the pond is approximately XX square feet and receives runof from approximately XX square feet of rooftop and parking lots. 
 
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
 
@@ -56,41 +52,6 @@ sitename <- info$SiteName[1]
 
 
 ```
-
-
-```{r echo=FALSE, warning = FALSE}
-
-marker1 <- paste0("<strong>Site Name: </strong>", info$SiteName, "<dd>", "<strong>Number of Variables: </strong>", dim(info)[1], "<dd>", "<strong>Organization: </strong>", info$organization)
-
-sewershed <- shapefile("Oakdale_Sewershed.shp")
-sewershed <- spTransform(sewershed, CRS("+init=epsg:4326"))
-palshed <- colorFactor(c("#ddc5a1"), sewershed$OBJECTID)
-
-
-output$map <- renderLeaflet({
-  map <- leaflet() %>%
-    addProviderTiles("CartoDB.Positron", group= "Light Basemap") %>%
-    addTiles(urlTemplate = 'http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-       attribution = 'Data source: Map data: Google, DigitalGlobe</a>', 
-       options = tileOptions(maxZoom = 20, minZoom=9, subdomains=c("mt0", "mt1", "mt2", "mt3")), group="Aerial Imagery") %>%
-    setView(lng = long, lat = lat, zoom=15) %>%
-    addPolygons(data=sewershed, fillOpacity=0.3, smoothFactor=0.2, color="red") %>%
-    addMarkers(info$Longitude[1],info$Latitude[1], popup= marker1, label=info$SiteName) %>%
-    addLayersControl(
-      overlayGroups = c("Aerial Imagery"), 
-      options = layersControlOptions(collapsed = FALSE)) %>%
-    hideGroup(c("Aerial Imagery"))
-})
-
-leafletOutput('map')
-
-``` 
-
-
-#Site Info
-***Board:*** Mayfly v0.5 <br>
-***Variables:***
-
 
 #Live Data Summary
 
@@ -109,10 +70,8 @@ vars <- c('Depth', 'Board Temperature', 'Air Temperature', 'Water Temperature')
 
 inputPanel(
 
-    column(12,
-          h4("Variable"),
-          selectizeInput("Var", "", vars
-          )
+    column(12,h4("Measurement:"),
+          selectizeInput("Var", "", vars)
     )
 )
 
@@ -152,7 +111,7 @@ renderPlotly({
     #wdepth <- wdepth %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
 
     p <- ggplot(wdepth,aes(x=datetime, y=Depth)) + 
-            geom_point(colour="steelblue", size=0.5) +
+            geom_point(colour="#5499C7", size=0.5) +
             geom_line(colour="grey70", alpha=0.5, linetype="dotted") +
             theme_minimal() + 
             theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
@@ -173,7 +132,7 @@ renderPlotly({
     btemp$datetime <- tidy$datetime
 
     p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
-          geom_point(colour="grey30", size=0.5) +
+          geom_point(colour="#52BE80", size=0.5) +
           geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
           theme_minimal() + 
           theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
@@ -195,7 +154,7 @@ renderPlotly({
   btemp$datetime <- tidy$datetime
   
   p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
-    geom_point(colour="firebrick3", size=0.5) +
+    geom_point(colour="#F5B041", size=0.5) +
     geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
     theme_minimal() + 
     theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
@@ -219,7 +178,7 @@ renderPlotly({
   btemp$DataValue <- btemp$DataValue*9/5+32
   
   p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
-    geom_point(colour="chartreuse4", size=0.5) +
+    geom_point(colour="#CD6155", size=0.5) +
     geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
     theme_minimal() + 
     theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
@@ -241,9 +200,47 @@ observeEvent(input$click, {
   wdepth2 <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
   
 })
+```
+
+#Site Info
+***<span style="color:#5499C7">Owner:</span>*** LimnoTech <br>
+***<span style="color:#5499C7">Site Location:</span>*** Oakdale, MN <br>
+***<span style="color:#5499C7">Board:</span>*** Mayfly v0.5 <br>
+***<span style="color:#5499C7">First Measurement:</span>*** `r info$beginDateTime[1]-11*60*60` <br>
+***<span style="color:#5499C7">Most Recent Measurement:</span>*** `r info$endDateTime[1]-11*60*60` <br>
+***<span style="color:#5499C7">Sensors:</span>*** `r unique(info$VariableCode)`
 
 
+#Site Location {#map}
 
+
+```{r echo=FALSE, warning = FALSE}
+
+marker1 <- paste0("<strong>Site Name: </strong>", info$SiteName, "<dd>", "<strong>Number of Variables: </strong>", dim(info)[1], "<dd>", "<strong>Organization: </strong>", info$organization)
+
+sewershed <- shapefile("Oakdale_Sewershed.shp")
+sewershed <- spTransform(sewershed, CRS("+init=epsg:4326"))
+palshed <- colorFactor(c("#ddc5a1"), sewershed$OBJECTID)
+
+
+output$map <- renderLeaflet({
+  map <- leaflet() %>%
+    addProviderTiles("CartoDB.Positron", group= "Light Basemap") %>%
+    addTiles(urlTemplate = 'http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+       attribution = 'Data source: Map data: Google, DigitalGlobe</a>', 
+       options = tileOptions(maxZoom = 20, minZoom=9, subdomains=c("mt0", "mt1", "mt2", "mt3")), group="Aerial Imagery") %>%
+    setView(lng = long, lat = lat, zoom=12) %>%
+    addPolygons(data=sewershed, fillOpacity=0.3, smoothFactor=0.2, color="red") %>%
+    addMarkers(info$Longitude[1],info$Latitude[1], popup= marker1, label=info$SiteName) %>%
+    addLayersControl(
+      overlayGroups = c("Aerial Imagery"), 
+      options = layersControlOptions(collapsed = FALSE)) %>%
+    hideGroup(c("Aerial Imagery"))
+})
+
+leafletOutput('map')
+
+``` 
 
 
 
