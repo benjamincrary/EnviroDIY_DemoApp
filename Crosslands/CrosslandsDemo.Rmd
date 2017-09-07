@@ -56,17 +56,17 @@ sitename <- info$SiteName[1]
 #Live Data Summary
 
 ```{r include=FALSE}
-
+## Preload first datasets
 
 wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", Sys.Date()-7,endDate=Sys.Date()+2 )
-
+bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
 
 ```
 
 
 ```{r echo=FALSE, warning = FALSE}
 
-vars <- c('Depth', 'Board Temperature', 'Air Temperature', 'Water Temperature', 'Humidity')
+vars <- c('Depth', 'Air Temperature', 'Water Temperature', 'Humidity')
 
 inputPanel(
 
@@ -122,45 +122,24 @@ renderPlotly({
     plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
     plotly_p
     
-  } else if(input$Var == "Board Temperature"){
-    
-    btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
-    tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
-    tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
-    btemp$date <- tidy$date
-    btemp$datetime <- tidy$datetime
-
-    p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
-          geom_point(colour="#52BE80", size=0.5) +
-          geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
-          theme_minimal() + 
-          theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-          xlab("Date") + 
-          ylab("Board Temperature (Deg C)")
-    p
-
-
-    plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
-    plotly_p
   } else if(input$Var == "Water Temperature"){
   
-  btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Adafruit_DS18B20_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
-  tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
+  wtemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Adafruit_DS18B20_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+  tidy <- separate(wtemp, time, into=c("date", "time"), sep="T")
   tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
   tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
   tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
-  btemp$date <- tidy$date
-  btemp$datetime <- tidy$datetime
+  wtemp$date <- tidy$date
+  wtemp$datetime <- tidy$datetime
+  wtemp$DataValue <- wtemp$DataValue*9/5+32
   
-  p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
+  p <- ggplot(wtemp, aes(x=datetime, y=DataValue)) +
     geom_point(colour="#F5B041", size=0.5) +
     geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
     theme_minimal() + 
     theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
     xlab("Date") + 
-    ylab("Water Temperature (Deg C)")
+    ylab("Water Temperature (Deg F)")
   p
   
   
@@ -168,17 +147,17 @@ renderPlotly({
   plotly_p
   } else if(input$Var == "Air Temperature"){
   
-  btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
-  tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
+  atemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+  tidy <- separate(atemp, time, into=c("date", "time"), sep="T")
   tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
   tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
   tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
-  btemp$date <- tidy$date
-  btemp$datetime <- tidy$datetime
-  btemp <- filter(btemp, DataValue < 90000)
-  btemp$DataValue <- btemp$DataValue*9/5+32
+  atemp$date <- tidy$date
+  atemp$datetime <- tidy$datetime
+  atemp <- filter(btemp, DataValue < 90000)
+  atemp$DataValue <- atemp$DataValue*9/5+32
   
-  p <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
+  p <- ggplot(atemp, aes(x=datetime, y=DataValue)) +
     geom_point(colour="#CD6155", size=0.5) +
     geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
     theme_minimal() + 
@@ -218,14 +197,6 @@ renderPlotly({
   
 })
 
-
-
-
-
-observeEvent(input$click, {
-  wdepth2 <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
-  
-})
 ```
 
 #Site Info
@@ -269,6 +240,91 @@ leafletOutput('map')
 ``` 
 
 
+#System Info
+
+```{r echo=FALSE, warning = FALSE}
+
+sysvars <- c('Battery','Board Temperature', 'Free RAM')
+
+inputPanel(
+
+    column(12, h4("Metric:"),
+          selectizeInput("Sysvar", "", sysvars)
+    )
+)
+
+``` 
+
+```{r echo=FALSE, warning = FALSE}
+
+renderPlotly({
+  if(input$Sysvar == "Battery") {
+    tidy <- separate(bbatt, time, into=c("date", "time"), sep="T")
+    tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    bbatt$date <- tidy$date
+    bbatt$datetime <- tidy$datetime
+
+    p2 <- ggplot(bbatt, aes(x=datetime, y=DataValue)) +
+          geom_point(colour="#52BE80", size=0.5) +
+          geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
+          theme_minimal() + 
+          theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+          xlab("Date") + 
+          ylab("Battery Voltage (V)")
+    p2
+    
+    plotly_p2 <- ggplotly(p2, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+    plotly_p2
+    
+  } else if(input$Sysvar == "Board Temperature") {
+    btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+    tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
+    tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    btemp$date <- tidy$date
+    btemp$datetime <- tidy$datetime
+    btemp$DataValue <- btemp$DataValue*9/5+32
+
+    p2 <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
+          geom_point(colour="#52BE80", size=0.5) +
+          geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
+          theme_minimal() + 
+          theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+          xlab("Date") + 
+          ylab("Board Temperature (Deg F)")
+    p2
+    
+    plotly_p2 <- ggplotly(p2, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+    plotly_p2
+  } else if (input$Sysvar == "Free RAM") {
+    
+    bram <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_FreeSRAM",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+    tidy <- separate(bram, time, into=c("date", "time"), sep="T")
+    tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    bram$date <- tidy$date
+    bram$datetime <- tidy$datetime
+
+    p2 <- ggplot(bram, aes(x=datetime, y=DataValue)) +
+          geom_point(colour="#52BE80", size=0.5) +
+          geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
+          theme_minimal() + 
+          theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+          xlab("Date") + 
+          ylab("Free RAM (bit)")
+    p2
+    
+    plotly_p2 <- ggplotly(p2, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+    plotly_p2
+    
+  }
+})
+
+```
 
 
 <img style="width:40px;height:40px;" align="right" src="Swirl_only.png"/> 
