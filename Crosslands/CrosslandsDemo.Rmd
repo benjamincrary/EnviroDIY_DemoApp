@@ -21,6 +21,8 @@ resource_files:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(shiny)
+library(knitr)
+library(kableExtra)
 library(ggplot2)
 library(tidyverse)
 library(quantmod)
@@ -61,12 +63,17 @@ sitename <- info$SiteName[1]
 wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", Sys.Date()-7,endDate=Sys.Date()+2 )
 bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
 
+sensor <- "MaxBotix MB7386"
+syssensor <- "Internal Mayfly Board"
 ```
 
 
 ```{r echo=FALSE, warning = FALSE}
 
-vars <- c('Depth', 'Air Temperature', 'Water Temperature', 'Humidity')
+vars <- c('Depth', 'Air Temperature', 'Water Temperature', 'Humidity','Board Temperature', 'Free RAM', 'Battery Voltage')
+sensors <- c('MaxBotix MB7386', 'Seeed BME280', 'Adafruit DS18B20','Seeed BME280','Internal Mayfly Board','Internal Mayfly Board','Internal Mayfly Board')
+varsens <- data.frame("measurement"=vars, "sensor"=sensors)
+
 
 inputPanel(
 
@@ -74,6 +81,13 @@ inputPanel(
           selectizeInput("Var", "", vars)
     )
 )
+
+
+sensor <- reactive({
+  as.character(varsens$sensor[varsens$measurement == input$Var][1])
+})
+
+
 
 #placeholder='Please select',
 #          onInitialize = I('function() {this.setValue(""); }')
@@ -154,7 +168,7 @@ renderPlotly({
   tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
   atemp$date <- tidy$date
   atemp$datetime <- tidy$datetime
-  atemp <- filter(btemp, DataValue < 90000)
+  atemp <- filter(atemp, DataValue < 90000)
   atemp$DataValue <- atemp$DataValue*9/5+32
   
   p <- ggplot(atemp, aes(x=datetime, y=DataValue)) +
@@ -198,6 +212,8 @@ renderPlotly({
 })
 
 ```
+***<span style="color:#5499C7">Sensor:</span>*** `r sensor` <br>
+
 
 #Site Info
 ***<span style="color:#5499C7">Owner:</span>*** LimnoTech <br>
@@ -205,8 +221,12 @@ renderPlotly({
 ***<span style="color:#5499C7">Board:</span>*** Mayfly v0.5 <br>
 ***<span style="color:#5499C7">First Measurement:</span>*** `r info$beginDateTime[1]-11*60*60` <br>
 ***<span style="color:#5499C7">Most Recent Measurement:</span>*** `r info$endDateTime[1]-11*60*60` <br>
-***<span style="color:#5499C7">Sensors:</span>*** `r unique(info$VariableCode)`
-
+***<span style="color:#5499C7">Sensors:</span>*** `r unique(varsens$sensor)` <br>
+***<span style="color:#5499C7">Measurements:</span>*** `r varsens$measurement` <br><br>
+```{r echo=FALSE, warning = FALSE, results='asis'}
+kable(varsens, caption="Measurement Detail") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
 
 #Site Location {#map}
 
@@ -240,7 +260,7 @@ leafletOutput('map')
 ``` 
 
 
-#System Info
+#System Status
 
 ```{r echo=FALSE, warning = FALSE}
 
@@ -259,6 +279,7 @@ inputPanel(
 
 renderPlotly({
   if(input$Sysvar == "Battery") {
+    
     tidy <- separate(bbatt, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
     tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
@@ -280,6 +301,7 @@ renderPlotly({
     
   } else if(input$Sysvar == "Board Temperature") {
     btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+    
     tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
     tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
@@ -302,6 +324,7 @@ renderPlotly({
   } else if (input$Sysvar == "Free RAM") {
     
     bram <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_FreeSRAM",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+    
     tidy <- separate(bram, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
     tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
@@ -325,6 +348,7 @@ renderPlotly({
 })
 
 ```
+***<span style="color:#5499C7">Sensor:</span>*** `r syssensor` <br>
 
 
 <img style="width:40px;height:40px;" align="right" src="Swirl_only.png"/> 
