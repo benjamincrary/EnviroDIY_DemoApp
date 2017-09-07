@@ -75,26 +75,6 @@ syssensor <- "Internal Mayfly Board"
 
 ```{r echo=FALSE, warning = FALSE}
 
-mindate <- min(cache_wdepth$datetime)
-
-renderPlotly({
-    p3 <- ggplot(cache_wdepth,aes(x=datetime, y=Depth)) + 
-            geom_point(colour="#5499C7", size=0.5) +
-            geom_line(colour="grey70", alpha=0.5, linetype="dotted") +
-            theme_minimal() + 
-            theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-            xlab("Date") + 
-            ylab("Water Depth (m)") +
-            xlim(mindate, Sys.time())
-    p3
-    plotly_p3 <- ggplotly(p3, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
-    plotly_p3
-})
-
-```
-
-```{r echo=FALSE, warning = FALSE}
-
 vars <- c('Depth', 'Air Temperature', 'Water Temperature', 'Humidity','Board Temperature', 'Free RAM', 'Battery Voltage')
 sensors <- c('MaxBotix MB7386', 'Seeed BME280', 'Adafruit DS18B20','Seeed BME280','Internal Mayfly Board','Internal Mayfly Board','Internal Mayfly Board')
 varsens <- data.frame("measurement"=vars, "sensor"=sensors)
