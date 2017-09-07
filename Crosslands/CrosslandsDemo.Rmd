@@ -16,6 +16,7 @@ resource_files:
 - Oakdale_Sewershed.shp
 - Oakdale_Sewershed.shp.xml
 - Oakdale_Sewershed.shx
+- cache_wdepth.RDS
 ---
 
 ```{r setup, include=FALSE}
@@ -59,8 +60,12 @@ sitename <- info$SiteName[1]
 
 ```{r include=FALSE}
 ## Preload first datasets
+filepath <- "cache_wdepth.RDS"
 
-wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", Sys.Date()-7,endDate=Sys.Date()+2 )
+cache_wdepth <- readRDS(filepath)
+cache_date <- tail(cache_wdepth$date, n=1)-2*60*60*24
+
+wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", cache_date, endDate=Sys.Date()+2 )
 bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
 
 sensor <- "MaxBotix MB7386"
@@ -70,15 +75,35 @@ syssensor <- "Internal Mayfly Board"
 
 ```{r echo=FALSE, warning = FALSE}
 
+mindate <- min(cache_wdepth$datetime)
+
+renderPlotly({
+    p3 <- ggplot(cache_wdepth,aes(x=datetime, y=Depth)) + 
+            geom_point(colour="#5499C7", size=0.5) +
+            geom_line(colour="grey70", alpha=0.5, linetype="dotted") +
+            theme_minimal() + 
+            theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+            xlab("Date") + 
+            ylab("Water Depth (m)") +
+            xlim(mindate, Sys.time())
+    p3
+    plotly_p3 <- ggplotly(p3, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+    plotly_p3
+})
+
+```
+
+```{r echo=FALSE, warning = FALSE}
+
 vars <- c('Depth', 'Air Temperature', 'Water Temperature', 'Humidity','Board Temperature', 'Free RAM', 'Battery Voltage')
 sensors <- c('MaxBotix MB7386', 'Seeed BME280', 'Adafruit DS18B20','Seeed BME280','Internal Mayfly Board','Internal Mayfly Board','Internal Mayfly Board')
 varsens <- data.frame("measurement"=vars, "sensor"=sensors)
 
-
+meas <- c('Depth', 'Air Temperature', 'Water Temperature', 'Humidity')
 inputPanel(
 
     column(12, h4("Measurement:"),
-          selectizeInput("Var", "", vars)
+          selectizeInput("Var", "", meas)
     )
 )
 
@@ -106,7 +131,7 @@ renderPlotly({
     tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
     tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))
     wdepth$datetime <- tidy$datetime
     wdepth$date <- tidy$date
     wdepth <- wdepth %>% filter(DataValue != 0) #keep non zero values
@@ -115,16 +140,16 @@ renderPlotly({
     wdepth <- wdepth %>% filter(DataValue > 1000) # depths greater than 3 m
     wdepth$Depth = (4000 - wdepth$DataValue)/1000
     #wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
-    mindate <- min(wdepth$datetime)
-    maxdate <- max(wdepth$datetime)
+    test <- unique(rbind(cache_wdepth, wdepth))
+    mindate <- min(test$datetime)
+    maxdate <- max(test$datetime)
     #range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
     #wdepth <- left_join(range, wdepth_dmax, by="date") %>% 
     #  mutate(ribmin = 0) %>%
     #  mutate(ribmax = if(is.na(maxDepth),0,maxDepth))
     #wdepth$ribmin <- 0
     #wdepth <- wdepth %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
-
-    p <- ggplot(wdepth,aes(x=datetime, y=Depth)) + 
+    p <- ggplot(test,aes(x=datetime, y=Depth)) + 
             geom_point(colour="#5499C7", size=0.5) +
             geom_line(colour="grey70", alpha=0.5, linetype="dotted") +
             theme_minimal() + 
@@ -226,6 +251,7 @@ renderPlotly({
 ```{r echo=FALSE, warning = FALSE, results='asis'}
 options(knitr.table.format = "html")
 kable(varsens) %>%
+  kable_styling(full_width=F, position="left")
 
 ```
 
