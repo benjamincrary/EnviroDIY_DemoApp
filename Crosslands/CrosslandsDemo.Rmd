@@ -234,17 +234,22 @@ renderPlotly({
 })
 
 
+```
+
+#System Info
+
+```{r echo=FALSE, warning = FALSE}
 
 
+sysvars <- c('Board Temperature', 'Battery', 'Free RAM')
 
-observeEvent(input$click, {
-  wdepth2 <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance")
-  
-})
+inputPanel(
 
+    column(12,
+          h4("Status:"),
+          selectizeInput("Sysvar", "", sysvars
+          )
+    )
+)
 
-
-
-
-
-
+```
