@@ -62,10 +62,10 @@ sitename <- info$SiteName[1]
 ## Preload first datasets
 filepath <- "cache_wdepth.RDS"
 
-cache_wdepth <- readRDS(filepath)
-cache_date <- tail(cache_wdepth$date, n=1)-2*60*60*24
+#cache_wdepth <- readRDS(filepath)
+#cache_date <- tail(cache_wdepth$date, n=1)-2*60*60*24
 
-wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", cache_date, endDate=Sys.Date()+2 )
+wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", Sys.Date()-7, endDate=Sys.Date()+2 )
 bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
 
 sensor <- "MaxBotix MB7386"
@@ -120,16 +120,16 @@ renderPlotly({
     wdepth <- wdepth %>% filter(DataValue > 1000) # depths greater than 3 m
     wdepth$Depth = (4000 - wdepth$DataValue)/1000
     #wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
-    test <- unique(rbind(cache_wdepth, wdepth))
-    mindate <- min(test$datetime)
-    maxdate <- max(test$datetime)
+    #test <- unique(rbind(cache_wdepth, wdepth))
+    mindate <- min(wdepth$datetime)
+    maxdate <- max(wdepth$datetime)
     #range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
     #wdepth <- left_join(range, wdepth_dmax, by="date") %>% 
     #  mutate(ribmin = 0) %>%
     #  mutate(ribmax = if(is.na(maxDepth),0,maxDepth))
     #wdepth$ribmin <- 0
     #wdepth <- wdepth %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
-    p <- ggplot(test,aes(x=datetime, y=Depth)) + 
+    p <- ggplot(wdepth,aes(x=datetime, y=Depth)) + 
             geom_point(colour="#5499C7", size=0.5) +
             geom_line(colour="grey70", alpha=0.5, linetype="dotted") +
             theme_minimal() + 
@@ -217,18 +217,32 @@ renderPlotly({
 })
 
 ```
-***<span style="color:#5499C7">Sensor:</span>*** `r sensor` <br>
+**<span style="color:#5499C7">Sensor:</span>** `r sensor` <br>
 
 
 #Site Info
-***<span style="color:#5499C7">Owner:</span>*** LimnoTech <br>
-***<span style="color:#5499C7">Site Location:</span>*** Oakdale, MN <br>
-***<span style="color:#5499C7">Board:</span>*** Mayfly v0.5 <br>
-***<span style="color:#5499C7">First Measurement:</span>*** `r info$beginDateTime[1]-11*60*60` <br>
-***<span style="color:#5499C7">Most Recent Measurement:</span>*** `r info$endDateTime[1]-11*60*60` <br>
-***<span style="color:#5499C7">Sensors:</span>*** `r unique(varsens$sensor)` <br>
-***<span style="color:#5499C7">Measurements:</span>*** `r varsens$measurement` <br><br>
-```{r echo=FALSE, warning = FALSE, results='asis'}
+**<span style="color:#5499C7">Owner:</span>** LimnoTech <br>
+**<span style="color:#5499C7">Site Location:</span>** Oakdale, MN <br>
+**<span style="color:#5499C7">Board:</span>** Mayfly v0.5 <br>
+**<span style="color:#5499C7">First Measurement:</span>** `r info$beginDateTime[1]-11*60*60` <br>
+**<span style="color:#5499C7">Most Recent Measurement:</span>** `r info$endDateTime[1]-11*60*60` <br>
+**<span style="color:#5499C7">Sensors:</span>** `r unique(varsens$sensor)` <br>
+**<span style="color:#5499C7">Measurements:</span>** `r varsens$measurement` <br><br>
+
+``` {r echo=FALSE, warning=FALSE, results = 'asis'}
+
+cat("
+
+<style>
+
+th {
+  background-color: #5499C7;
+  color: white; }
+
+</style>
+
+")
+
 options(knitr.table.format = "html")
 kable(varsens) %>%
   kable_styling(full_width=F, position="left")
@@ -358,9 +372,9 @@ renderPlotly({
 })
 
 ```
-***<span style="color:#5499C7">Sensor:</span>*** `r syssensor` <br>
+***<span style="color:#5499C7">Sensor:</span>*** `r syssensor` <br><br>
 
-
+<span style="color:#ededed;align="left">Version 1.0</span>
 <img style="width:40px;height:40px;" align="right" src="Swirl_only.png"/> 
 
 
