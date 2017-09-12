@@ -54,19 +54,37 @@ long <- info$Longitude[1]
 sitename <- info$SiteName[1]
 
 
+f1 <- list(
+  family = "Arial, sans-serif",
+  size = 18
+)
+
 ```
 
 #Live Data Summary
 
 ```{r include=FALSE}
-## Preload first datasets
+## Preload first datasets#
 filepath <- "cache_wdepth.RDS"
 
-cache_wdepth <- readRDS(filepath)
-cache_date <- tail(cache_wdepth$date, n=1)-2*60*60*24
+cache_wdepth <- readRDS("cache_wdepth.RDS")
+cache_wtemp <- readRDS("cache_wtemp.RDS")
+cache_atemp <- readRDS("cache_atemp.RDS")
+cache_humidity <- readRDS("cache_humidity.RDS")
+cache_bbatt <- readRDS("cache_bbatt.RDS")
+cache_btemp <- readRDS("cache_btemp.RDS")
+cache_bram <- readRDS("cache_bram.RDS")
 
-wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", cache_date, endDate=Sys.Date()+2 )
-bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+wdcache_date <- tail(cache_wdepth$date, n=1)-2*60*60*24
+wtcache_date <- tail(cache_wtemp$date, n=1)-2*60*60*24
+atcache_date <- tail(cache_atemp$date, n=1)-2*60*60*24
+hucache_date <- tail(cache_humidity$date, n=1)-2*60*60*24
+bbcache_date <- tail(cache_bbatt$date, n=1)-2*60*60*24
+btcache_date <- tail(cache_btemp$date, n=1)-2*60*60*24
+brcache_date <- tail(cache_bram$date, n=1)-2*60*60*24
+
+wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", wdcache_date, endDate=Sys.Date()+2 )
+bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = btcache_date,endDate=Sys.Date()+2)
 
 sensor <- "MaxBotix MB7386"
 syssensor <- "Internal Mayfly Board"
@@ -93,12 +111,6 @@ sensor <- reactive({
 })
 
 
-
-#placeholder='Please select',
-#          onInitialize = I('function() {this.setValue(""); }')
-#
-
-
 ```
 
 
@@ -116,42 +128,25 @@ renderPlotly({
     wdepth$date <- tidy$date
     wdepth <- wdepth %>% filter(DataValue != 0) #keep non zero values
     wdepth <- wdepth %>% filter(DataValue != 9999) # error code from sensor
-    wdepth <- wdepth %>% filter(DataValue < 4000) # 
+    wdepth <- wdepth %>% filter(DataValue < 4000) # greater than distance from sensor to sediment 
     wdepth <- wdepth %>% filter(DataValue > 1000) # depths greater than 3 m
     wdepth$Depth = (4000 - wdepth$DataValue)/1000
-    #wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
     wdepth <- unique(rbind(cache_wdepth, wdepth))
     mindate <- min(wdepth$datetime)
     maxdate <- max(wdepth$datetime)
-    #range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
-    #wdepth <- left_join(range, wdepth_dmax, by="date") %>% 
-    #  mutate(ribmin = 0) %>%
-    #  mutate(ribmax = if(is.na(maxDepth),0,maxDepth))
-    #wdepth$ribmin <- 0
-    #wdepth <- wdepth %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
     
+    x <- list(title="Date & Time", font=f1)
+    y <- list(title="Water Depth (meters)", font=f1)
     
-    plotly_p <- plot_ly(data=wdepth, x=~datetime, y=~Depth, mode='line+markers', marker=list(color='rgb(84,153,199)'),line=list(color='rgba(179,179,179,0.5)',dash='dash')) %>%
+    plotly_p <- plot_ly(data=wdepth, x=~datetime, y=~Depth, type='scatter', mode='line',line=list(color='rgba(84,153,199,1)')) %>%
+      layout(plot_bgcolor='rgb(247,247,247)',xaxis=x, yaxis=y) %>%
       toWebGL()
     plotly_p
     
     
-    
-    #p <- ggplot(wdepth,aes(x=datetime, y=Depth)) + 
-    #        geom_point(colour="#5499C7", size=0.5) +
-    #        geom_line(colour="grey70", alpha=0.5, linetype="dotted") +
-    #        theme_minimal() + 
-    #        theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-    #        xlab("Date") + 
-    #        ylab("Water Depth (m)") +
-    #        xlim(mindate, Sys.time())
-    #p
-    #plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
-    #plotly_p
-    
   } else if(input$Var == "Water Temperature"){
   
-  wtemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Adafruit_DS18B20_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+  wtemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Adafruit_DS18B20_Temp",startDate = wtcache_date,endDate=Sys.Date()+2)
   tidy <- separate(wtemp, time, into=c("date", "time"), sep="T")
   tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
   tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
@@ -159,66 +154,61 @@ renderPlotly({
   wtemp$date <- tidy$date
   wtemp$datetime <- tidy$datetime
   wtemp$DataValue <- wtemp$DataValue*9/5+32
+  wtemp <- unique(rbind(cache_wtemp, wtemp))
+  wtemp <- wtemp %>% filter(DataValue > 0)
   
-  p <- ggplot(wtemp, aes(x=datetime, y=DataValue)) +
-    geom_point(colour="#F5B041", size=0.5) +
-    geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
-    theme_minimal() + 
-    theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-    xlab("Date") + 
-    ylab("Water Temperature (Deg F)")
-  p
+  x <- list(title="Date & Time (CST)", font=f1)
+  y <- list(title="Water Temperature (Deg F)", font=f1)   
   
-  
-  plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+  plotly_p <- plot_ly(data=wtemp, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(84,153,199,1)')) %>%
+    layout(plot_bgcolor='rgb(247,247,247)',xaxis=x, yaxis=y) %>%
+    toWebGL()
   plotly_p
+  
   } else if(input$Var == "Air Temperature"){
   
-  atemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+  atemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_Temp",startDate = atcache_date,endDate=Sys.Date()+2)
   tidy <- separate(atemp, time, into=c("date", "time"), sep="T")
   tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
   tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
   tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
   atemp$date <- tidy$date
   atemp$datetime <- tidy$datetime
-  atemp <- filter(atemp, DataValue < 90000)
   atemp$DataValue <- atemp$DataValue*9/5+32
+  atemp <- filter(atemp, DataValue < 120)
+  atemp <- unique(rbind(cache_atemp, atemp))
   
-  p <- ggplot(atemp, aes(x=datetime, y=DataValue)) +
-    geom_point(colour="#CD6155", size=0.5) +
-    geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
-    theme_minimal() + 
-    theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-    xlab("Date") + 
-    ylab("Air Temperature (Deg F)")
-  p
+  x <- list(title="Date & Time (CST)", font=f1)
+  y <- list(title="Air Temperature (Deg F)", font=f1)
   
-  
-  plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+  plotly_p <- plot_ly(data=atemp, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(205,97,85,1)')) %>%
+    layout(plot_bgcolor='rgb(247,247,247)',xaxis=x, yaxis=y) %>%
+    toWebGL()
   plotly_p
+  
   
   } else if(input$Var == "Humidity") {
     
-  humidity <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_humidity", Sys.Date()-7,endDate=Sys.Date()+2)
+  humidity <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_humidity", hucache_date,endDate=Sys.Date()+2)
   tidy <- separate(humidity, time, into=c("date", "time"), sep="T")
   tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
   tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
   tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
   humidity$date <- tidy$date
   humidity$datetime <- tidy$datetime
+  humidity <- unique(rbind(cache_humidity, humidity))
+  humidity <- humidity %>% filter(DataValue < 100.1)
+      
+  x <- list(title="Humidity (%)", font=f1)
+  y <- list(title="Free RAM (bit)", font=f1)
+
   
-  p <- ggplot(humidity, aes(x=datetime, y=DataValue)) +
-    geom_point(colour="#424949", size=0.5) +
-    geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
-    theme_minimal() + 
-    theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-    xlab("Date") + 
-    ylab("Humidity (%)")
-  p
-  
-  
-  plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+  plotly_p <- plot_ly(data=humidity, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(66,73,73,1)')) %>%
+    layout(plot_bgcolor='rgb(247,247,247)',xaxis=x, yaxis=y) %>%
+    toWebGL()
   plotly_p
+  
+  
   } 
   
   
@@ -236,7 +226,7 @@ renderPlotly({
 **<span style="color:#5499C7">Most Recent Measurement:</span>** `r info$endDateTime[1]-11*60*60` <br>
 **<span style="color:#5499C7">Sensors:</span>** `r unique(varsens$sensor)` <br>
 **<span style="color:#5499C7">Measurements:</span>** `r varsens$measurement` <br><br>
-**<span style="color:#5499C7">Measurements:</span>** `r dim(cache_wdepth)` <br><br>
+
 
 ``` {r echo=FALSE, warning=FALSE, results = 'asis'}
 
@@ -319,21 +309,19 @@ renderPlotly({
     tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
     bbatt$date <- tidy$date
     bbatt$datetime <- tidy$datetime
-
-    p2 <- ggplot(bbatt, aes(x=datetime, y=DataValue)) +
-          geom_point(colour="#52BE80", size=0.5) +
-          geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
-          theme_minimal() + 
-          theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-          xlab("Date") + 
-          ylab("Battery Voltage (V)")
-    p2
+    bbatt <- unique(rbind(cache_bbatt, bbatt))
     
-    plotly_p2 <- ggplotly(p2, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
-    plotly_p2
+    x <- list(title="Date & Time (CST)", font=f1)
+    y <- list(title="Battery (Volts)", font=f1)
+
+    plotly_p <- plot_ly(data=bbatt, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(82,190,128,1)')) %>%
+    layout(plot_bgcolor='rgb(247,247,247)',xaxis=x, yaxis=y) %>%
+    toWebGL()
+    plotly_p
+    
     
   } else if(input$Sysvar == "Board Temperature") {
-    btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Temp",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+    btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Temp",startDate = btcache_date,endDate=Sys.Date()+2)
     
     tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
@@ -342,21 +330,19 @@ renderPlotly({
     btemp$date <- tidy$date
     btemp$datetime <- tidy$datetime
     btemp$DataValue <- btemp$DataValue*9/5+32
+    btemp <- unique(rbind(cache_btemp, btemp))
 
-    p2 <- ggplot(btemp, aes(x=datetime, y=DataValue)) +
-          geom_point(colour="#52BE80", size=0.5) +
-          geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
-          theme_minimal() + 
-          theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-          xlab("Date") + 
-          ylab("Board Temperature (Deg F)")
-    p2
+    x <- list(title="Date & Time (CST)", font=f1)
+    y <- list(title="Board Temperature (Deg F)", font=f1)
     
-    plotly_p2 <- ggplotly(p2, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
-    plotly_p2
+    plotly_p <- plot_ly(data=btemp, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(82,190,128,1)')) %>%
+    layout(plot_bgcolor='rgb(247,247,247)',xaxis=x, yaxis=y) %>%
+    toWebGL()
+    plotly_p
+    
   } else if (input$Sysvar == "Free RAM") {
     
-    bram <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_FreeSRAM",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
+    bram <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_FreeSRAM",startDate = brcache_date,endDate=Sys.Date()+2)
     
     tidy <- separate(bram, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
@@ -364,26 +350,22 @@ renderPlotly({
     tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
     bram$date <- tidy$date
     bram$datetime <- tidy$datetime
+    bram <- unique(rbind(cache_bram, bram))
 
-    p2 <- ggplot(bram, aes(x=datetime, y=DataValue)) +
-          geom_point(colour="#52BE80", size=0.5) +
-          geom_line(colour="grey70",alpha=0.5, linetype="dotted") +
-          theme_minimal() + 
-          theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-          xlab("Date") + 
-          ylab("Free RAM (bit)")
-    p2
+    x <- list(title="Date & Time (CST)", font=f1)
+    y <- list(title="Free RAM (bit)", font=f1)
     
-    plotly_p2 <- ggplotly(p2, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
-    plotly_p2
-    
+    plotly_p <- plot_ly(data=bram, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(82,190,128,1)')) %>%
+    layout(plot_bgcolor='rgb(247,247,247)', xaxis=x, yaxis=y) %>%
+    toWebGL()
+    plotly_p
   }
 })
 
 ```
 ***<span style="color:#5499C7">Sensor:</span>*** `r syssensor` <br><br>
 
-<span style="color:#ededed;align="left">Version 1.0</span>
+<span style="color:#ededed;align="left">Version 1.01 </span>
 <img style="width:40px;height:40px;" align="right" src="Swirl_only.png"/> 
 
 
