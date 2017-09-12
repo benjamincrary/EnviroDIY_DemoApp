@@ -1,5 +1,5 @@
 ---
-title: <span style="color:#1A5276">EnviroDIY - Crosslands Demo</span>
+title: <span style="color:#1A5276">EnviroDIY - Crossroads Demo</span>
 author: <span style="color:#85C1E9">![alt text](Limno_Swirl_no_tagline_MAP.png)</span>
 subtitle: <span style="color:#424949">Live summary of measurements made in a stormwater pond in Oakdale, MN</span>
 output: 
@@ -39,7 +39,7 @@ library(raster)
 
 ```
 
-**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crosslands property. The surface area of the pond is approximately 7,500 square feet while the pond's sewershed (delineated in red on the [map](#map)) is 55 acres. The pond was constructed in between two business park developments. 
+**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crossroads property. The surface area of the pond is approximately 7,500 square feet while the pond's sewershed (delineated in red on the [map](#map)) is 55 acres. The pond was constructed in between two business park developments. 
 
 
 
