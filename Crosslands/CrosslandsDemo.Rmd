@@ -62,10 +62,10 @@ sitename <- info$SiteName[1]
 ## Preload first datasets
 filepath <- "cache_wdepth.RDS"
 
-#cache_wdepth <- readRDS(filepath)
-#cache_date <- tail(cache_wdepth$date, n=1)-2*60*60*24
+cache_wdepth <- readRDS(filepath)
+cache_date <- tail(cache_wdepth$date, n=1)-2*60*60*24
 
-wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", Sys.Date()-7, endDate=Sys.Date()+2 )
+wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", cache_date, endDate=Sys.Date()+2 )
 bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = Sys.Date()-7,endDate=Sys.Date()+2)
 
 sensor <- "MaxBotix MB7386"
@@ -120,7 +120,7 @@ renderPlotly({
     wdepth <- wdepth %>% filter(DataValue > 1000) # depths greater than 3 m
     wdepth$Depth = (4000 - wdepth$DataValue)/1000
     #wdepth_dmax <- wdepth %>% group_by(date) %>% summarise(maxDepth=max(Depth))
-    #test <- unique(rbind(cache_wdepth, wdepth))
+    wdepth <- unique(rbind(cache_wdepth, wdepth))
     mindate <- min(wdepth$datetime)
     maxdate <- max(wdepth$datetime)
     #range <- data.frame(date=seq.POSIXt(mindate, maxdate, by=86400))
@@ -129,17 +129,25 @@ renderPlotly({
     #  mutate(ribmax = if(is.na(maxDepth),0,maxDepth))
     #wdepth$ribmin <- 0
     #wdepth <- wdepth %>% mutate(ribmax = ifelse(is.na(maxDepth),0,maxDepth))
-    p <- ggplot(wdepth,aes(x=datetime, y=Depth)) + 
-            geom_point(colour="#5499C7", size=0.5) +
-            geom_line(colour="grey70", alpha=0.5, linetype="dotted") +
-            theme_minimal() + 
-            theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
-            xlab("Date") + 
-            ylab("Water Depth (m)") +
-            xlim(mindate, Sys.time())
-    p
-    plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+    
+    
+    plotly_p <- plot_ly(data=wdepth, x=~datetime, y=~Depth, mode='line+markers', marker=list(color='rgb(84,153,199)'),line=list(color='rgba(179,179,179,0.5)',dash='dash')) %>%
+      toWebGL()
     plotly_p
+    
+    
+    
+    #p <- ggplot(wdepth,aes(x=datetime, y=Depth)) + 
+    #        geom_point(colour="#5499C7", size=0.5) +
+    #        geom_line(colour="grey70", alpha=0.5, linetype="dotted") +
+    #        theme_minimal() + 
+    #        theme(panel.background = element_rect(colour=NA, fill="grey97")) + 
+    #        xlab("Date") + 
+    #        ylab("Water Depth (m)") +
+    #        xlim(mindate, Sys.time())
+    #p
+    #plotly_p <- ggplotly(p, dynamicTicks=TRUE) %>% layout(margin=list(r=20, l=60, t=20, b=50))
+    #plotly_p
     
   } else if(input$Var == "Water Temperature"){
   
@@ -228,6 +236,7 @@ renderPlotly({
 **<span style="color:#5499C7">Most Recent Measurement:</span>** `r info$endDateTime[1]-11*60*60` <br>
 **<span style="color:#5499C7">Sensors:</span>** `r unique(varsens$sensor)` <br>
 **<span style="color:#5499C7">Measurements:</span>** `r varsens$measurement` <br><br>
+**<span style="color:#5499C7">Measurements:</span>** `r dim(cache_wdepth)` <br><br>
 
 ``` {r echo=FALSE, warning=FALSE, results = 'asis'}
 
