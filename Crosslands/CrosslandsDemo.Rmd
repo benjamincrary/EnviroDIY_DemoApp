@@ -366,7 +366,7 @@ renderPlotly({
 ```
 ***<span style="color:#5499C7">Sensor:</span>*** `r syssensor` <br><br>
 
-<span style="color:#ededed;align="left">Version 1.01 </span>
+<span style="color:#ededed;align="left">Version 1.02 </span>
 <img style="width:40px;height:40px;" align="right" src="Swirl_only.png"/> 
 
 
