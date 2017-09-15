@@ -39,7 +39,7 @@ library(raster)
 
 ```
 
-**LimnoTech** has installed an EnviroDIY site in a stormwater pond on Crossroads property. The surface area of the pond is approximately 7,500 square feet while the pond's sewershed (delineated in red on the [map](#map)) is 55 acres. The pond was constructed in between two business park developments. 
+**[LimnoTech](http://www.limno.com/)** has installed an EnviroDIY site in a stormwater pond on Crossroads property. The surface area of the pond is approximately 7,500 square feet while the pond's sewershed (delineated in red on the [map](#map)) is 55 acres. The pond was constructed in between two business park developments. 
 
 
 
@@ -67,7 +67,7 @@ f1 <- list(
 ## Preload first datasets#
 filepath <- "cache_wdepth.RDS"
 
-cache_wdepth <- readRDS("cache_wdepth.RDS")
+cache_wdepth <- readRDS("C:/Users/bcrary/Desktop/Projects/BigCZ/EnviroDIY_DemoApp/Crosslands/cache_wdepth.RDS")
 cache_wtemp <- readRDS("cache_wtemp.RDS")
 cache_atemp <- readRDS("cache_atemp.RDS")
 cache_humidity <- readRDS("cache_humidity.RDS")
@@ -75,7 +75,7 @@ cache_bbatt <- readRDS("cache_bbatt.RDS")
 cache_btemp <- readRDS("cache_btemp.RDS")
 cache_bram <- readRDS("cache_bram.RDS")
 
-wdcache_date <- tail(cache_wdepth$date, n=1)-2*60*60*24
+wdcache_date <- tail(cache_wdepth$date, n=1)+11*60*60
 wtcache_date <- tail(cache_wtemp$date, n=1)-2*60*60*24
 atcache_date <- tail(cache_atemp$date, n=1)-2*60*60*24
 hucache_date <- tail(cache_humidity$date, n=1)-2*60*60*24
@@ -83,7 +83,7 @@ bbcache_date <- tail(cache_bbatt$date, n=1)-2*60*60*24
 btcache_date <- tail(cache_btemp$date, n=1)-2*60*60*24
 brcache_date <- tail(cache_bram$date, n=1)-2*60*60*24
 
-wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", wdcache_date, endDate=Sys.Date()+2 )
+wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", wdcache_date, endDate=Sys.Date()+2)
 bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = btcache_date,endDate=Sys.Date()+2)
 
 sensor <- "MaxBotix MB7386"
@@ -123,7 +123,7 @@ renderPlotly({
     tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
     tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
     wdepth$datetime <- tidy$datetime
     wdepth$date <- tidy$date
     wdepth <- wdepth %>% filter(DataValue != 0) #keep non zero values
@@ -132,10 +132,11 @@ renderPlotly({
     wdepth <- wdepth %>% filter(DataValue > 1000) # depths greater than 3 m
     wdepth$Depth = (4000 - wdepth$DataValue)/1000
     wdepth <- unique(rbind(cache_wdepth, wdepth))
+    wdepth_test <- unique(rbind(cache_wdepth, wdepth))
     mindate <- min(wdepth$datetime)
     maxdate <- max(wdepth$datetime)
     
-    x <- list(title="Date & Time", font=f1)
+    x <- list(title="Date & Time (Central Time)", font=f1)
     y <- list(title="Water Depth (meters)", font=f1)
     
     plotly_p <- plot_ly(data=wdepth, x=~datetime, y=~Depth, type='scatter', mode='line',line=list(color='rgba(84,153,199,1)')) %>%
@@ -157,7 +158,7 @@ renderPlotly({
   wtemp <- unique(rbind(cache_wtemp, wtemp))
   wtemp <- wtemp %>% filter(DataValue > 0)
   
-  x <- list(title="Date & Time (CST)", font=f1)
+  x <- list(title="Date & Time (Central Time)", font=f1)
   y <- list(title="Water Temperature (Deg F)", font=f1)   
   
   plotly_p <- plot_ly(data=wtemp, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(84,153,199,1)')) %>%
@@ -178,7 +179,7 @@ renderPlotly({
   atemp <- filter(atemp, DataValue < 120)
   atemp <- unique(rbind(cache_atemp, atemp))
   
-  x <- list(title="Date & Time (CST)", font=f1)
+  x <- list(title="Date & Time (Central Time)", font=f1)
   y <- list(title="Air Temperature (Deg F)", font=f1)
   
   plotly_p <- plot_ly(data=atemp, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(205,97,85,1)')) %>%
@@ -311,7 +312,7 @@ renderPlotly({
     bbatt$datetime <- tidy$datetime
     bbatt <- unique(rbind(cache_bbatt, bbatt))
     
-    x <- list(title="Date & Time (CST)", font=f1)
+    x <- list(title="Date & Time (Central Time)", font=f1)
     y <- list(title="Battery (Volts)", font=f1)
 
     plotly_p <- plot_ly(data=bbatt, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(82,190,128,1)')) %>%
@@ -332,7 +333,7 @@ renderPlotly({
     btemp$DataValue <- btemp$DataValue*9/5+32
     btemp <- unique(rbind(cache_btemp, btemp))
 
-    x <- list(title="Date & Time (CST)", font=f1)
+    x <- list(title="Date & Time (Central Time)", font=f1)
     y <- list(title="Board Temperature (Deg F)", font=f1)
     
     plotly_p <- plot_ly(data=btemp, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(82,190,128,1)')) %>%
@@ -352,7 +353,7 @@ renderPlotly({
     bram$datetime <- tidy$datetime
     bram <- unique(rbind(cache_bram, bram))
 
-    x <- list(title="Date & Time (CST)", font=f1)
+    x <- list(title="Date & Time (Central Time)", font=f1)
     y <- list(title="Free RAM (bit)", font=f1)
     
     plotly_p <- plot_ly(data=bram, x=~datetime, y=~DataValue, type='scatter', mode='line',line=list(color='rgba(82,190,128,1)')) %>%
