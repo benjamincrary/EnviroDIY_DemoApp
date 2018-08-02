@@ -36,6 +36,8 @@ library(rgdal)
 library(rgeos)
 library(sp)
 library(raster)
+library(prettydoc)
+library(kableExtra)
 
 ```
 
@@ -47,8 +49,8 @@ library(raster)
 
 ```{r echo=FALSE, warning=FALSE, include=FALSE}
 
-server <- "http://odm2wofpy.uwrl.usu.edu:8080/odm2timeseries/soap/cuahsi_1_0/.wsdl"
-info <- GetSiteInfo(server, "odm2timeseries:160065_Crosslands")
+server <- "http://data.envirodiy.org/wofpy/soap/cuahsi_1_0/.wsdl"
+info <- GetSiteInfo(server, "envirodiy:160065_Limno_Crossroads")
 lat <- info$Latitude[1]
 long <- info$Longitude[1]
 sitename <- info$SiteName[1]
@@ -66,8 +68,9 @@ f1 <- list(
 ```{r include=FALSE}
 ## Preload first datasets#
 filepath <- "cache_wdepth.RDS"
+#C:/Users/bcrary/Desktop/Projects/BigCZ/EnviroDIY_DemoApp/Crosslands/
 
-cache_wdepth <- readRDS("C:/Users/bcrary/Desktop/Projects/BigCZ/EnviroDIY_DemoApp/Crosslands/cache_wdepth.RDS")
+cache_wdepth <- readRDS("cache_wdepth.RDS")
 cache_wtemp <- readRDS("cache_wtemp.RDS")
 cache_atemp <- readRDS("cache_atemp.RDS")
 cache_humidity <- readRDS("cache_humidity.RDS")
@@ -75,16 +78,26 @@ cache_bbatt <- readRDS("cache_bbatt.RDS")
 cache_btemp <- readRDS("cache_btemp.RDS")
 cache_bram <- readRDS("cache_bram.RDS")
 
-wdcache_date <- tail(cache_wdepth$date, n=1)+11*60*60
-wtcache_date <- tail(cache_wtemp$date, n=1)-2*60*60*24
-atcache_date <- tail(cache_atemp$date, n=1)-2*60*60*24
-hucache_date <- tail(cache_humidity$date, n=1)-2*60*60*24
-bbcache_date <- tail(cache_bbatt$date, n=1)-2*60*60*24
-btcache_date <- tail(cache_btemp$date, n=1)-2*60*60*24
-brcache_date <- tail(cache_bram$date, n=1)-2*60*60*24
+cache_wdepth$datetime <- cache_wdepth$datetime
+cache_wtemp$datetime <- cache_wtemp$datetime
+cache_atemp$datetime <- cache_atemp$datetime
+cache_humidity$datetime <- cache_humidity$datetime
+cache_bbatt$datetime <- cache_bbatt$datetime
+cache_btemp$datetime <- cache_btemp$datetime
+cache_bram$datetime <- cache_bram$datetime
 
-wdepth <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:MaxBotix_MB7386_Distance", wdcache_date, endDate=Sys.Date()+2)
-bbatt <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Volt",startDate = btcache_date,endDate=Sys.Date()+2)
+wdcache_date <- tail(cache_wdepth$date, n=1)+11*60*60-2*60*60*24
+wtcache_date <- tail(cache_wtemp$date, n=1)+11*60*60-2*60*60*24
+atcache_date <- tail(cache_atemp$date, n=1)+11*60*60-2*60*60*24
+hucache_date <- tail(cache_humidity$date, n=1)+11*60*60-2*60*60*24
+bbcache_date <- tail(cache_bbatt$date, n=1)+11*60*60-2*60*60*24
+btcache_date <- tail(cache_btemp$date, n=1)+11*60*60-2*60*60*24
+brcache_date <- tail(cache_bram$date, n=1)+11*60*60-2*60*60*24
+
+server <- "http://data.envirodiy.org/wofpy/soap/cuahsi_1_1/.wsdl"
+
+wdepth <- GetValues(server, siteCode="envirodiy:160065_Limno_Crossroads", variableCode="envirodiy:MaxBotix_MB7386_Distance", wdcache_date, endDate=Sys.Date()+2)
+#bbatt <- GetValues(server, siteCode="envirodiy:160065_Limno_Crossroads", variableCode="envirodiy:EnviroDIY_Mayfly_Batt",startDate = btcache_date,endDate=Sys.Date()+2)
 
 sensor <- "MaxBotix MB7386"
 syssensor <- "Internal Mayfly Board"
@@ -120,10 +133,10 @@ sensor <- reactive({
 
 renderPlotly({
   if(input$Var == "Depth"){
-    tidy <- separate(wdepth, time, into=c("date", "time"), sep="T")
+    tidy <- separate(wdepth, time, into=c("date", "time"), sep=" ")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S", tz="America/Chicago"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d", tz="America/Chicago"))-11*60*60
     wdepth$datetime <- tidy$datetime
     wdepth$date <- tidy$date
     wdepth <- wdepth %>% filter(DataValue != 0) #keep non zero values
@@ -132,7 +145,6 @@ renderPlotly({
     wdepth <- wdepth %>% filter(DataValue > 1000) # depths greater than 3 m
     wdepth$Depth = (4000 - wdepth$DataValue)/1000
     wdepth <- unique(rbind(cache_wdepth, wdepth))
-    wdepth_test <- unique(rbind(cache_wdepth, wdepth))
     mindate <- min(wdepth$datetime)
     maxdate <- max(wdepth$datetime)
     
@@ -147,11 +159,11 @@ renderPlotly({
     
   } else if(input$Var == "Water Temperature"){
   
-  wtemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Adafruit_DS18B20_Temp",startDate = wtcache_date,endDate=Sys.Date()+2)
-  tidy <- separate(wtemp, time, into=c("date", "time"), sep="T")
+  wtemp <- GetValues(server, siteCode="envirodiy:160065_Limno_Crossroads", variableCode="envirodiy:Maxim_DS18B20_Temp",startDate = wtcache_date,endDate=Sys.Date()+2)
+  tidy <- separate(wtemp, time, into=c("date", "time"), sep=" ")
   tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-  tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-  tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+  tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S", tz="America/Chicago"))-11*60*60
+  tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d", tz="America/Chicago"))-11*60*60
   wtemp$date <- tidy$date
   wtemp$datetime <- tidy$datetime
   wtemp$DataValue <- wtemp$DataValue*9/5+32
@@ -168,11 +180,11 @@ renderPlotly({
   
   } else if(input$Var == "Air Temperature"){
   
-  atemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_Temp",startDate = atcache_date,endDate=Sys.Date()+2)
-  tidy <- separate(atemp, time, into=c("date", "time"), sep="T")
+  atemp <- GetValues(server, siteCode="envirodiy:160065_Limno_Crossroads", variableCode="envirodiy:Bosch_BME280_Temp",startDate = atcache_date,endDate=Sys.Date()+2)
+  tidy <- separate(atemp, time, into=c("date", "time"), sep=" ")
   tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-  tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-  tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+  tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S", tz="America/Chicago"))-11*60*60
+  tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d", tz="America/Chicago"))-11*60*60
   atemp$date <- tidy$date
   atemp$datetime <- tidy$datetime
   atemp$DataValue <- atemp$DataValue*9/5+32
@@ -190,11 +202,11 @@ renderPlotly({
   
   } else if(input$Var == "Humidity") {
     
-  humidity <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:Seeed_BME280_humidity", hucache_date,endDate=Sys.Date()+2)
-  tidy <- separate(humidity, time, into=c("date", "time"), sep="T")
+  humidity <- GetValues(server, siteCode="envirodiy:160065_Limno_Crossroads", variableCode="envirodiy:Bosch_BME280_Humidity", hucache_date,endDate=Sys.Date()+2)
+  tidy <- separate(humidity, time, into=c("date", "time"), sep=" ")
   tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-  tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-  tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+  tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S", tz="America/Chicago"))-11*60*60
+  tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d", tz="America/Chicago"))-11*60*60
   humidity$date <- tidy$date
   humidity$datetime <- tidy$datetime
   humidity <- unique(rbind(cache_humidity, humidity))
@@ -255,7 +267,7 @@ kable(varsens) %>%
 #Site Location {#map}
 
 
-```{r echo=FALSE, warning = FALSE}
+```{r echo=FALSE, warning = FALSE,results="asis"}
 
 marker1 <- paste0("<strong>Site Name: </strong>", info$SiteName, "<dd>", "<strong>Number of Variables: </strong>", dim(info)[1], "<dd>", "<strong>Organization: </strong>", info$organization)
 
@@ -288,7 +300,7 @@ leafletOutput('map')
 
 ```{r echo=FALSE, warning = FALSE}
 
-sysvars <- c('Battery','Board Temperature', 'Free RAM')
+sysvars <- c('Free RAM')
 
 inputPanel(
 
@@ -302,12 +314,13 @@ inputPanel(
 ```{r echo=FALSE, warning = FALSE}
 
 renderPlotly({
+  req(input$Sysvar)
   if(input$Sysvar == "Battery") {
     
-    tidy <- separate(bbatt, time, into=c("date", "time"), sep="T")
+    tidy <- separate(bbatt, time, into=c("date", "time"), sep=" ")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S", tz="America/Chicago"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d", tz="America/Chicago"))-11*60*60
     bbatt$date <- tidy$date
     bbatt$datetime <- tidy$datetime
     bbatt <- unique(rbind(cache_bbatt, bbatt))
@@ -322,12 +335,12 @@ renderPlotly({
     
     
   } else if(input$Sysvar == "Board Temperature") {
-    btemp <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_Temp",startDate = btcache_date,endDate=Sys.Date()+2)
+    btemp <- GetValues(server, siteCode="envirodiy:160065_Limno_Crossroads", variableCode="envirodiy:EnviroDIY_Mayfly_Temp",startDate = btcache_date,endDate=Sys.Date()+2)
     
-    tidy <- separate(btemp, time, into=c("date", "time"), sep="T")
+    tidy <- separate(btemp, time, into=c("date", "time"), sep=" ")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S", tz="America/Chicago"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d", tz="America/Chicago"))-11*60*60
     btemp$date <- tidy$date
     btemp$datetime <- tidy$datetime
     btemp$DataValue <- btemp$DataValue*9/5+32
@@ -343,12 +356,12 @@ renderPlotly({
     
   } else if (input$Sysvar == "Free RAM") {
     
-    bram <- GetValues(server, siteCode="odm2timeseries:160065_Crosslands", variableCode="odm2timeseries:EnviroDIY_Mayfly_FreeSRAM",startDate = brcache_date,endDate=Sys.Date()+2)
+    bram <- GetValues(server, siteCode="envirodiy:160065_Limno_Crossroads", variableCode="EnviroDIY_Mayfly_FreeRAM",startDate = brcache_date,endDate=Sys.Date()+2)
     
-    tidy <- separate(bram, time, into=c("date", "time"), sep="T")
+    tidy <- separate(bram, time, into=c("date", "time"), sep=" ")
     tidy$datetime <- paste(tidy$date, " ", tidy$time,sep="")
-    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S"))-11*60*60
-    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d"))-11*60*60
+    tidy$datetime <- as.POSIXct(strptime(tidy$datetime,format="%Y-%m-%d %H:%M:%S", tz="America/Chicago"))-11*60*60
+    tidy$date <- as.POSIXct(strptime(tidy$date, format="%Y-%m-%d", tz="America/Chicago"))-11*60*60
     bram$date <- tidy$date
     bram$datetime <- tidy$datetime
     bram <- unique(rbind(cache_bram, bram))
@@ -366,7 +379,7 @@ renderPlotly({
 ```
 ***<span style="color:#5499C7">Sensor:</span>*** `r syssensor` <br><br>
 
-<span style="color:#ededed;align="left">Version 1.02 </span>
+<span style="color:#ededed;align="left">Author: Ben Crary, LimnoTech </span>
 <img style="width:40px;height:40px;" align="right" src="Swirl_only.png"/> 
 
 

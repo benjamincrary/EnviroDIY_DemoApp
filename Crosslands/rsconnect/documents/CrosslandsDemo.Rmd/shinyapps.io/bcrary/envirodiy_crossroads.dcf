@@ -1,0 +1,12 @@
+name: envirodiy_crossroads
+title: EnviroDIY Crossroads
+username:
+account: bcrary
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 235592
+bundleId: 1515217
+url: https://limno.shinyapps.io/envirodiy_crossroads/
+when: 1533238362.24803
+asMultiple: FALSE
+asStatic: FALSE
