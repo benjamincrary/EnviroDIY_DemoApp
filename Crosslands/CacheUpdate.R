@@ -11,12 +11,8 @@ library(WaterML)
 library(tidyverse)
 
 
-#server <- "http://data.envirodiy.org/wofpy/soap/cuahsi_1_1/.wsdl"
-server <- "http://data.envirodiy.org/wofpy/rest_1_1/"
-server <- "http://hiscentral.cuahsi.org/pub_network.aspx?n=5644?WSDL"
-server <- ""
-sites <- GetSites(server)
-sites <- GetSites("http://data.envirodiy.org/wofpy/rest/1_1/GetSites")
+server <- "http://data.envirodiy.org/wofpy/soap/cuahsi_1_1/.wsdl"
+
 
 ## water depth
 wdepth <- GetValues(server, siteCode="envirodiy:160065_Limno_Crossroads", variableCode="envirodiy:MaxBotix_MB7386_Distance")
